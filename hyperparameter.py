@@ -19,7 +19,7 @@ def GridSearch(train_set, getModel):
     param_grid = dict(epochs=epochs,
                       batch_size=batch_size,
                       optimizer=optimizer,
-                      #dropout_rate=dropout_rate,
+                      dropout_rate=dropout_rate,
                       activation_function=activation_function,
                       #kernel_initializer=kernel_initializer
                     )

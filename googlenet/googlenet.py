@@ -60,6 +60,7 @@ def create_model(activation_function = 'relu',
                  dropout_rate = 0,
                  class_number = 3,
                  picture_size = 32):
+
     global model_classes
     global model_optimizer
     global model_activation
@@ -74,13 +75,13 @@ def create_model(activation_function = 'relu',
     X_input = Input([picture_size,picture_size,3])
 
     # Stage 1 - layers before inception modules
-    X = Conv2D(filters=64, kernel_size=5, strides=1, padding='same', activation='relu',
+    X = Conv2D(filters=64, kernel_size=5, strides=1, padding='same', activation=model_activation,
                kernel_regularizer=l2(0.0002))(X_input)
     X = MaxPooling2D(pool_size=3, strides=2, padding='same')(X)
     X = BatchNormalization(axis=3)(X)
-    X = Conv2D(filters=64, kernel_size=1, strides=1, padding='valid', activation='relu',
+    X = Conv2D(filters=64, kernel_size=1, strides=1, padding='valid', activation=model_activation,
                kernel_regularizer=l2(0.0002))(X)
-    X = Conv2D(filters=192, kernel_size=3, strides=1, padding='same', activation='relu',
+    X = Conv2D(filters=192, kernel_size=3, strides=1, padding='same', activation=model_activation,
                kernel_regularizer=l2(0.0002))(X)
     X = BatchNormalization(axis=3)(X)
     X = MaxPooling2D(pool_size=3, strides=1, padding='same')(X)

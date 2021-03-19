@@ -1,18 +1,20 @@
 from TA.hyperparameter import *
 from TA.preprocessing import *
 from TA.performance_meansure import *
+from TA.googlenet.googlenet import *
 
 import shutil
 import sys
 import os
 import time
+import gc
 
 import numpy as np  # linear algebra
 from sklearn.model_selection import StratifiedKFold
 import matplotlib.pyplot as plt
 import random
 
-datasetFolderName = 'Dataset'
+datasetFolderName = '/Koding/Python/TA/Dataset'
 train_path=datasetFolderName+'/Training/'
 validation_path=datasetFolderName+'/Validation/'
 test_path=datasetFolderName+'/Testing/'
@@ -69,17 +71,14 @@ prepareNameWithLabels(classLabels[2])
 X = np.asarray(X)
 Y = np.asarray(Y)
 
-train_data, validation_data = preprocessing.getLungCancer(train_path,
-                                                          validation_path,
-                                                          picture_size)
+train_data, validation_data = getLungCancer(train_path, validation_path, picture_size)
 
-best_param = hyperparameter.GridSearch(train_data,
-                                       arsitektur.create_model_resnet)
+best_param = GridSearch(train_data, create_model)
 
-cnn = arsitektur.create_model_resnet(best_param['activation_function'],
+cnn = create_model(best_param['activation_function'],
                #best_param['kernel_initializer'],
                best_param['optimizer'],
-               #best_param['dropout_rate']
+               best_param['dropout_rate']
                 )
 
 print(cnn.summary())
@@ -87,6 +86,8 @@ print(cnn.summary())
 skf = StratifiedKFold(n_splits=5, shuffle=True)
 skf.get_n_splits(X, Y)
 foldNum=0
+history = {'train_acc':[], 'train_loss':[], 'test_acc':[], 'test_loss':[]}
+
 for train_index, val_index in skf.split(X, Y):
     #First cut all images from validation to train (if any exists)
     transferAllClassBetweenFolders('Validation', 'Training', 1.0)
@@ -108,23 +109,46 @@ for train_index, val_index in skf.split(X, Y):
         shutil.move(datasetFolderName+'/Training/'+classLabel+'/'+X_val[eachIndex],
                     datasetFolderName+'/Validation/'+classLabel+'/'+X_val[eachIndex])
 
-    training_set, test_set = preprocessing.getLungCancer(train_path,
+    training_set, test_set = getLungCancer(train_path,
                                                          validation_path,
                                                          picture_size,
                                                          best_param['batch_size'])
 
     # Training the CNN on the Training set and evaluating it on the Test set
-    fit = cnn.fit(x=training_set,
-                  epochs=best_param['epochs'],
-                  validation_data=test_set,
-                  verbose=1)
+    for epoch in range(best_param['epochs']):
+        # Free unused memory
+        _ = gc.collect()
+        # Train 1 epoch
+        results = cnn.fit(x=training_set,
+                          epochs=1,
+                          batch_size=250,
+                          validation_data=test_set,
+                          verbose=0)
+
+        # Save epoch results
+        history['train_acc'].append(results.history['dense_5_acc'][0])
+        history['train_loss'].append(results.history['dense_5_loss'][0])
+        history['test_acc'].append(results.history['val_dense_5_acc'][0])
+        history['test_loss'].append(results.history['val_dense_5_loss'][0])
+
+
+        # Print epoch results
+        print('Epoch: ' + str(epoch) + '/' + str(epochs - 1),
+              'Train_acc:', history['train_acc'][-1].round(4),
+              'Train_loss:', history['train_loss'][-1].round(4),
+              'Test_acc:', history['test_acc'][-1].round(4),
+              'Test_loss:', history['test_loss'][-1].round(4))
+
+
+# Plot train / validation results
+plot_results(history)
 
 fig, ax = plt.subplots(1, 2, figsize=(20, 3))
 ax = ax.ravel()
 
 for i, met in enumerate(['acc', 'loss']):
-    ax[i].plot(fit.history[met])
-    ax[i].plot(fit.history['val_' + met])
+    ax[i].plot(results.history[met])
+    ax[i].plot(results.history['val_' + met])
     ax[i].set_title('Model {}'.format(met))
     ax[i].set_xlabel('epochs')
     ax[i].set_ylabel(met)
@@ -132,7 +156,7 @@ for i, met in enumerate(['acc', 'loss']):
 plt.show()
 
 print("==============TEST RESULTS============")
-test_datagen = preprocessing.imageDatagen()
+test_datagen = imageDatagen()
 
 test_generator = test_datagen.flow_from_directory(
         test_path,
@@ -144,7 +168,7 @@ predictions = cnn.predict(test_generator, verbose=1)
 yPredictions = np.argmax(predictions, axis=1)
 true_classes = test_generator.classes
 
-testAcc,testPrec, testFScore = performance_meansure.my_metrics(true_classes, yPredictions)
+testAcc,testPrec, testFScore = my_metrics(true_classes, yPredictions)
 
 cnn_time = time.time() - start_time
 print("Time : {}".format(cnn_time))
