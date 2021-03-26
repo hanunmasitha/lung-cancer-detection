@@ -167,5 +167,5 @@ def create_model_resnet(activation_function = 'relu',
     # Create model
     model = Model(inputs=X_input, outputs=X)
 
-    model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics = ['accuracy'])
+    model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics = ['acc'])
     return model

@@ -73,7 +73,7 @@ Y = np.asarray(Y)
 
 train_data, validation_data = getLungCancer(train_path, validation_path, picture_size)
 
-best_param = GridSearch(train_data, create_model)
+best_param = RandomSearch(train_data, create_model)
 
 cnn = create_model(best_param['activation_function'],
                #best_param['kernel_initializer'],
@@ -83,10 +83,9 @@ cnn = create_model(best_param['activation_function'],
 
 print(cnn.summary())
 # ===============Stratified K-Fold======================
-skf = StratifiedKFold(n_splits=5, shuffle=True)
+skf = StratifiedKFold(n_splits=2, shuffle=True)
 skf.get_n_splits(X, Y)
 foldNum=0
-history = {'train_acc':[], 'train_loss':[], 'test_acc':[], 'test_loss':[]}
 
 for train_index, val_index in skf.split(X, Y):
     #First cut all images from validation to train (if any exists)
@@ -110,38 +109,22 @@ for train_index, val_index in skf.split(X, Y):
                     datasetFolderName+'/Validation/'+classLabel+'/'+X_val[eachIndex])
 
     training_set, test_set = getLungCancer(train_path,
-                                                         validation_path,
-                                                         picture_size,
-                                                         best_param['batch_size'])
+                                            validation_path,
+                                            picture_size,
+                                            best_param['batch_size'])
 
-    # Training the CNN on the Training set and evaluating it on the Test set
-    for epoch in range(best_param['epochs']):
-        # Free unused memory
-        _ = gc.collect()
-        # Train 1 epoch
-        results = cnn.fit(x=training_set,
-                          epochs=1,
-                          batch_size=250,
-                          validation_data=test_set,
-                          verbose=0)
-
-        # Save epoch results
-        history['train_acc'].append(results.history['dense_5_acc'][0])
-        history['train_loss'].append(results.history['dense_5_loss'][0])
-        history['test_acc'].append(results.history['val_dense_5_acc'][0])
-        history['test_loss'].append(results.history['val_dense_5_loss'][0])
-
-
-        # Print epoch results
-        print('Epoch: ' + str(epoch) + '/' + str(epochs - 1),
-              'Train_acc:', history['train_acc'][-1].round(4),
-              'Train_loss:', history['train_loss'][-1].round(4),
-              'Test_acc:', history['test_acc'][-1].round(4),
-              'Test_loss:', history['test_loss'][-1].round(4))
+    # Free unused memory
+    _ = gc.collect()
+    # Train 1 epoch
+    results = cnn.fit(x=training_set,
+                      epochs=1,
+                      #epochs=best_param['epochs'],
+                      validation_data=test_set,
+                      verbose=1)
 
 
 # Plot train / validation results
-plot_results(history)
+plot_results(results)
 
 fig, ax = plt.subplots(1, 2, figsize=(20, 3))
 ax = ax.ravel()

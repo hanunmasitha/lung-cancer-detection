@@ -115,7 +115,7 @@ def create_model(activation_function = 'relu',
     model = Model(inputs=X_input, outputs=[X_output, aux_output_1, aux_output_2])
     model.compile(optimizer=model_optimizer,
                   loss='categorical_crossentropy',
-                  metrics=['accuracy'],
+                  metrics=['acc'],
                   loss_weights=[1., 0.3, 0.3])
 
     return model

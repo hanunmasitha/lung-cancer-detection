@@ -19,7 +19,7 @@ def GridSearch(train_set, getModel):
     param_grid = dict(epochs=epochs,
                       batch_size=batch_size,
                       optimizer=optimizer,
-                      dropout_rate=dropout_rate,
+                      #dropout_rate=dropout_rate,
                       activation_function=activation_function,
                       #kernel_initializer=kernel_initializer
                     )
@@ -37,16 +37,16 @@ def GridSearch(train_set, getModel):
     return best_params
 
 def RandomSearch(train_set, getModel):
-
     X_train, Y_train = train_set.next()
     model = KerasClassifier(build_fn=getModel)
 
     param_grid = dict(epochs=epochs,
                       batch_size=batch_size,
                       optimizer=optimizer,
-                      dropout_rate=dropout_rate,
+                      #dropout_rate=dropout_rate,
                       activation_function=activation_function,
-                      kernel_initializer=kernel_initializer)
+                      #kernel_initializer=kernel_initializer
+    )
 
     from sklearn.model_selection import RandomizedSearchCV
 

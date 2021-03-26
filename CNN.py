@@ -86,7 +86,7 @@ cnn = arsitektur.create_model_resnet(best_param['activation_function'],
 
 print(cnn.summary())
 # ===============Stratified K-Fold======================
-skf = StratifiedKFold(n_splits=5, shuffle=True)
+skf = StratifiedKFold(n_splits=2, shuffle=True)
 skf.get_n_splits(X, Y)
 foldNum=0
 for train_index, val_index in skf.split(X, Y):
@@ -117,7 +117,8 @@ for train_index, val_index in skf.split(X, Y):
 
     # Training the CNN on the Training set and evaluating it on the Test set
     fit = cnn.fit(x=training_set,
-                  epochs=best_param['epochs'],
+                  #epochs=best_param['epochs'],
+                  epochs=10,
                   validation_data=test_set,
                   verbose=1)
 
