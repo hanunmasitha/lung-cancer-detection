@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tensorflow.python.keras.losses import categorical_crossentropy
+from tensorflow import keras
 
 
 def seperableConv_2d(filters, kernel_size, pool_size, activation_function):
@@ -13,24 +14,30 @@ def seperableConv_2d(filters, kernel_size, pool_size, activation_function):
 
     return conv
 
-def fullconnected(filter, kernel_initializer, activation_function):
-    fullcon = tf.keras.layers.Dense(units=filter,
-                                  kernel_initializer=kernel_initializer,
-                                  activation=activation_function)
+def fullconnected(units, kernel_initializer, activation_function):
+    fullcon = tf.keras.Sequential([
+        tf.keras.layers.Dense(units=units,
+                              kernel_initializer=kernel_initializer,
+                              activation=activation_function
+                              ),
+        tf.keras.layers.BatchNormalization()
+    ])
 
     return fullcon
 
-def arsitek_pertama(activation_function = 'relu',
+def alexnet(activation_function = 'relu',
                     kernel_initializer = 'uniform',
                     optimizer = 'adam',
                     dropout_rate = 0,
+                    #learning_rate = 0.01,
+                    #momentum_rate = 0.9,
                     class_number = 3,
-                    picture_size = [32,32,3]):
+                    picture_size = [64,64,3]):
 
     cnn = tf.keras.models.Sequential([
         tf.keras.layers.Conv2D(filters=32, kernel_size=3,
                                activation=activation_function,
-                               input_shape=[picture_size, picture_size, 3]),
+                               input_shape=picture_size),
 
         seperableConv_2d(96, 3, 2, activation_function),
         seperableConv_2d(192, 3, 2, activation_function),
@@ -41,55 +48,24 @@ def arsitek_pertama(activation_function = 'relu',
 
     # Step 3 - Flattening
     cnn.add(tf.keras.layers.Flatten())
-    cnn.add(tf.keras.layers.BatchNormalization())
 
     # Step 4 - Full Connection
     cnn.add(fullconnected(512, kernel_initializer, activation_function))
+    #cnn.add(fullconnected(64, kernel_initializer, activation_function))
 
     # Step 5 - Output Layer
     cnn.add(tf.keras.layers.Dense(units=class_number, activation='softmax'))
 
     # Part 3 - Training the CNN
     # Compiling the CNN
-    cnn.compile(optimizer=optimizer,
-                loss=categorical_crossentropy,
-                metrics=['acc'])
+    if(optimizer == "Adam"):
+        #opt = keras.optimizers.Adam(lr=learning_rate, beta_1 = momentum_rate)
+        opt = keras.optimizers.Adam()
+    elif(optimizer == "RMSprop"):
+        #opt = keras.optimizers.RMSprop(lr=learning_rate, momentum = momentum_rate)
+        opt = keras.optimizers.RMSprop()
 
-    print(cnn.summary())
-
-    return cnn
-
-def arstitek2(activation_function = 'relu',
-              kernel_initializer = 'uniform',
-              optimizer = 'adam',
-              dropout_rate = 0,
-              class_number = 3,
-              picture_size = 32):
-
-    #dari paper Using Deep Learning for Classification of Lung Nodules on Computed Tomography Images
-    #akurasi 84.15%
-
-    cnn = tf.keras.models.Sequential([
-        tf.keras.layers.Conv2D(filters=32, kernel_size=5,
-                               activation=activation_function,
-                               input_shape=[picture_size, picture_size, 3]),
-        seperableConv_2d(28, 5, 2, activation_function),
-        seperableConv_2d(12, 5, 2, activation_function),
-        tf.keras.layers.Dropout(dropout_rate),
-    ])
-
-    # Step 3 - Flattening
-    cnn.add(tf.keras.layers.Flatten())
-
-    # Step 4 - Full Connection
-    cnn.add(fullconnected(512, kernel_initializer, activation_function))
-
-    # Step 5 - Output Layer
-    cnn.add(tf.keras.layers.Dense(units=class_number, activation='softmax'))
-
-    # Part 3 - Training the CNN
-    # Compiling the CNN
-    cnn.compile(optimizer=optimizer,
+    cnn.compile(optimizer=opt,
                 loss=categorical_crossentropy,
                 metrics=['acc'])
 
@@ -125,19 +101,22 @@ def building_block(X, filter_size, filters, stride=1, activation_function = 'rel
 
 
 # Full model
-def create_model_resnet(activation_function = 'relu',
-                      optimizer = 'adam',
-                      class_number = 3,
-                      picture_size = 32):
+def resnet(activation_function = 'relu',
+            kernel_initializer = 'uniform',
+            optimizer = 'adam',
+            dropout_rate = 0,
+            class_number = 3,
+            picture_size = [32,32,3]):
+
 
     # Define the input
-    activation = activation_function
-    X_input = Input([picture_size, picture_size, 3])
+    X_input = Input(picture_size)
 
     # Stage 1
     X = Conv2D(filters=16, kernel_size=3, strides=(1, 1), padding='same')(X_input)
     X = BatchNormalization(axis=3)(X)
     X = Activation(activation_function)(X)
+    X = Dropout(dropout_rate)(X)
 
     # Stage 2
     X = building_block(X, filter_size=3, filters=16, stride=1)
@@ -145,6 +124,7 @@ def create_model_resnet(activation_function = 'relu',
     X = building_block(X, filter_size=3, filters=16, stride=1)
     X = building_block(X, filter_size=3, filters=16, stride=1)
     X = building_block(X, filter_size=3, filters=16, stride=1)
+    X = Dropout(dropout_rate)(X)
 
     # Stage 3
     X = building_block(X, filter_size=3, filters=32, stride=2)  # dimensions change (stride=2)
@@ -152,6 +132,7 @@ def create_model_resnet(activation_function = 'relu',
     X = building_block(X, filter_size=3, filters=32, stride=1)
     X = building_block(X, filter_size=3, filters=32, stride=1)
     X = building_block(X, filter_size=3, filters=32, stride=1)
+    X = Dropout(dropout_rate)(X)
 
     # Stage 4
     X = building_block(X, filter_size=3, filters=64, stride=2)  # dimensions change (stride=2)
@@ -159,10 +140,11 @@ def create_model_resnet(activation_function = 'relu',
     X = building_block(X, filter_size=3, filters=64, stride=1)
     X = building_block(X, filter_size=3, filters=64, stride=1)
     X = building_block(X, filter_size=3, filters=64, stride=1)
+    X = Dropout(dropout_rate)(X)
 
     # Average pooling and output layer
     X = GlobalAveragePooling2D()(X)
-    X = Dense(class_number, activation='softmax')(X)
+    X = Dense(class_number, activation='softmax', kernel_initializer=kernel_initializer,)(X)
 
     # Create model
     model = Model(inputs=X_input, outputs=X)

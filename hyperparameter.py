@@ -8,9 +8,11 @@ kernel_initializer = ['glorot_uniform', 'he_uniform']  # You can also try , lecu
 optimizer = ['Adam', 'RMSprop']  # You can also try , 'SGD', 'RMSprop', 'Adagrad', 'Adadelta', 'Adamax'
 
 # Hyperparameters
-epochs = [5, 10]  # You can also try 20, 30, 40, etc...
+epochs = [10]  # You can also try 20, 30, 40, etc...
 batch_size = [4, 16, 32]  # You can also try 2, 4, 8, 16, 32, 64, 128 etc...
 dropout_rate = [0.1, 0.2, 0.4]  # No dropout, but you can also try 0.1, 0.2 etc...
+learning_rate = [0.1, 0.01, 0.001]
+momentum_rate = [0.9, 0.7, 0.5]
 
 def GridSearch(train_set, getModel):
     X_train, Y_train = train_set.next()
@@ -19,9 +21,11 @@ def GridSearch(train_set, getModel):
     param_grid = dict(epochs=epochs,
                       batch_size=batch_size,
                       optimizer=optimizer,
-                      #dropout_rate=dropout_rate,
+                      dropout_rate=dropout_rate,
+                      #learning_rate = learning_rate,
+                      #momentum_rate = momentum_rate,
                       activation_function=activation_function,
-                      #kernel_initializer=kernel_initializer
+                      kernel_initializer=kernel_initializer
                     )
 
     from sklearn.model_selection import GridSearchCV
@@ -43,9 +47,11 @@ def RandomSearch(train_set, getModel):
     param_grid = dict(epochs=epochs,
                       batch_size=batch_size,
                       optimizer=optimizer,
-                      #dropout_rate=dropout_rate,
+                      dropout_rate=dropout_rate,
+                      learning_rate=learning_rate,
+                      momentum_rate=momentum_rate,
                       activation_function=activation_function,
-                      #kernel_initializer=kernel_initializer
+                      kernel_initializer=kernel_initializer
     )
 
     from sklearn.model_selection import RandomizedSearchCV

@@ -4,7 +4,6 @@ from TA.performance_meansure import *
 from TA.googlenet.googlenet import *
 
 import shutil
-import sys
 import os
 import time
 import gc
@@ -109,34 +108,53 @@ for train_index, val_index in skf.split(X, Y):
                     datasetFolderName+'/Validation/'+classLabel+'/'+X_val[eachIndex])
 
     training_set, test_set = getLungCancer(train_path,
-                                            validation_path,
-                                            picture_size,
-                                            best_param['batch_size'])
+                                           validation_path,
+                                           picture_size,
+                                           best_param['batch_size'])
 
-    # Free unused memory
-    _ = gc.collect()
-    # Train 1 epoch
-    results = cnn.fit(x=training_set,
-                      epochs=1,
-                      #epochs=best_param['epochs'],
-                      validation_data=test_set,
-                      verbose=1)
+    history = {'train_acc': [], 'train_loss': [], 'test_acc': [], 'test_loss': []}
+    epochs=best_param['epochs']
+    for epoch in range(epochs):
+        # Free unused memory
+        _ = gc.collect()
+
+        # Train 1 epoch
+        results = cnn.fit(x=training_set,
+                          epochs=1,
+                          validation_data=test_set,
+                          verbose=0)
+
+        history['train_acc'].append(results.history['dense_33_accuracy'][0])
+        history['train_loss'].append(results.history['dense_33_loss'][0])
+        history['test_acc'].append(results.history['val_dense_33_accuracy'][0])
+        history['test_loss'].append(results.history['val_dense_33_loss'][0])
+
+        # Print epoch results
+        print('Epoch: ' + str(epoch+1) + '/' + str(epochs),
+              'Train_acc:', history['train_acc'][-1],
+              'Train_loss:', history['train_loss'][-1],
+              'Test_acc:', history['test_acc'][-1],
+              'Test_loss:', history['test_loss'][-1])
 
 
 # Plot train / validation results
-plot_results(results)
-
 fig, ax = plt.subplots(1, 2, figsize=(20, 3))
 ax = ax.ravel()
 
-for i, met in enumerate(['acc', 'loss']):
-    ax[i].plot(results.history[met])
-    ax[i].plot(results.history['val_' + met])
-    ax[i].set_title('Model {}'.format(met))
-    ax[i].set_xlabel('epochs')
-    ax[i].set_ylabel(met)
-    ax[i].legend(['train', 'val'])
-plt.show()
+pl.figure()
+
+pl.subplot(121)
+pl.plot(history['train_acc'])
+pl.title('Accuracy:')
+pl.plot(history['test_acc'])
+pl.legend(('Train', 'Test'))
+
+pl.subplot(122)
+pl.plot(history['train_loss'])
+pl.title('Cost:')
+pl.plot(history['test_loss'])
+pl.legend(('Train', 'Test'))
+pl.show()
 
 print("==============TEST RESULTS============")
 test_datagen = imageDatagen()

@@ -13,6 +13,7 @@ import numpy as np  # linear algebra
 from sklearn.model_selection import StratifiedKFold
 import matplotlib.pyplot as plt
 import random
+from keras.models import load_model
 
 datasetFolderName = 'Dataset'
 train_path=datasetFolderName+'/Training/'
@@ -20,7 +21,7 @@ validation_path=datasetFolderName+'/Validation/'
 test_path=datasetFolderName+'/Testing/'
 sourceFiles = []
 classLabels = ['Kanker', 'Normal', 'Tumor']
-picture_size = 32
+picture_size = 64
 
 start_time = time.time()
 def transferBetweenFolders(source, dest, splitRate):
@@ -76,17 +77,21 @@ train_data, validation_data = preprocessing.getLungCancer(train_path,
                                                           picture_size)
 
 best_param = hyperparameter.GridSearch(train_data,
-                                       arsitektur.create_model_resnet)
+                                       arsitektur.alexnet)
 
-cnn = arsitektur.create_model_resnet(best_param['activation_function'],
-               #best_param['kernel_initializer'],
+cnn = arsitektur.alexnet(best_param['activation_function'],
+               best_param['kernel_initializer'],
                best_param['optimizer'],
-               #best_param['dropout_rate']
+               best_param['dropout_rate'],
+               #best_param['learning_rate'],
+               #best_param['momentum_rate'],
+               len(classLabels),
+               [picture_size, picture_size, 3]
                 )
 
 print(cnn.summary())
 # ===============Stratified K-Fold======================
-skf = StratifiedKFold(n_splits=2, shuffle=True)
+skf = StratifiedKFold(n_splits=5, shuffle=True)
 skf.get_n_splits(X, Y)
 foldNum=0
 for train_index, val_index in skf.split(X, Y):
@@ -117,8 +122,8 @@ for train_index, val_index in skf.split(X, Y):
 
     # Training the CNN on the Training set and evaluating it on the Test set
     fit = cnn.fit(x=training_set,
-                  #epochs=best_param['epochs'],
-                  epochs=10,
+                  epochs=best_param['epochs'],
+                  #epochs=1,
                   validation_data=test_set,
                   verbose=1)
 
@@ -132,7 +137,7 @@ for i, met in enumerate(['acc', 'loss']):
     ax[i].set_xlabel('epochs')
     ax[i].set_ylabel(met)
     ax[i].legend(['train', 'val'])
-plt.show()
+
 
 print("==============TEST RESULTS============")
 test_datagen = preprocessing.imageDatagen()
@@ -148,8 +153,22 @@ yPredictions = np.argmax(predictions, axis=1)
 true_classes = test_generator.classes
 
 testAcc,testPrec, testFScore = performance_meansure.my_metrics(true_classes, yPredictions)
-
 cnn_time = time.time() - start_time
+
+previous_model = load_model('model.h5')
+predictions = previous_model.predict(test_generator, verbose=1)
+yPredictions = np.argmax(predictions, axis=1)
+true_classes = test_generator.classes
+
+previous_testAcc,previous_testPrec, previous_testFScore = performance_meansure.my_metrics(true_classes, yPredictions)
+
+if(previous_testAcc < testAcc):
+    print("Model Update")
+    cnn.save("model.h5")
+else:
+    print("Model not updated")
+
 print("Time : {}".format(cnn_time))
+plt.show()
 
 
