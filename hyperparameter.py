@@ -48,8 +48,8 @@ def RandomSearch(train_set, getModel):
                       batch_size=batch_size,
                       optimizer=optimizer,
                       dropout_rate=dropout_rate,
-                      learning_rate=learning_rate,
-                      momentum_rate=momentum_rate,
+                      #learning_rate=learning_rate,
+                      #momentum_rate=momentum_rate,
                       activation_function=activation_function,
                       kernel_initializer=kernel_initializer
     )

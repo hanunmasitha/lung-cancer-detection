@@ -2,55 +2,57 @@ import tensorflow as tf
 from tensorflow.python.keras.losses import categorical_crossentropy
 from tensorflow import keras
 
-
-def seperableConv_2d(filters, kernel_size, pool_size, activation_function):
-    conv = tf.keras.models.Sequential([
-        tf.keras.layers.SeparableConv2D(filters=filters,
-                                        kernel_size=kernel_size,
-                                        activation=activation_function,
-                                        padding='same'),
-        tf.keras.layers.MaxPool2D(pool_size=pool_size),
-    ])
-
-    return conv
-
-def fullconnected(units, kernel_initializer, activation_function):
-    fullcon = tf.keras.Sequential([
-        tf.keras.layers.Dense(units=units,
-                              kernel_initializer=kernel_initializer,
-                              activation=activation_function
-                              ),
-        tf.keras.layers.BatchNormalization()
-    ])
-
-    return fullcon
-
 def alexnet(activation_function = 'relu',
                     kernel_initializer = 'uniform',
                     optimizer = 'adam',
                     dropout_rate = 0,
-                    #learning_rate = 0.01,
-                    #momentum_rate = 0.9,
                     class_number = 3,
                     picture_size = [64,64,3]):
 
     cnn = tf.keras.models.Sequential([
-        tf.keras.layers.Conv2D(filters=32, kernel_size=3,
+        tf.keras.layers.Conv2D(filters=96, kernel_size=11,
+                               strides=4,
+                               padding='same',
                                activation=activation_function,
                                input_shape=picture_size),
+        tf.keras.layers.Lambda(tf.nn.local_response_normalization),
+        tf.keras.layers.MaxPool2D(2, strides=2),
 
-        seperableConv_2d(96, 3, 2, activation_function),
-        seperableConv_2d(192, 3, 2, activation_function),
-        tf.keras.layers.Dropout(dropout_rate),
-        seperableConv_2d(192, 3, 2, activation_function),
-        tf.keras.layers.Dropout(dropout_rate),
+        tf.keras.layers.Conv2D(filters=256, kernel_size=5,
+                               strides=4,
+                               padding='same',
+                               activation=activation_function),
+        tf.keras.layers.Lambda(tf.nn.local_response_normalization),
+        tf.keras.layers.MaxPool2D(2, strides=2),
+
+        tf.keras.layers.Conv2D(filters=384, kernel_size=3,
+                               strides=4,
+                               padding='same',
+                               activation=activation_function),
+
+        tf.keras.layers.Conv2D(filters=384, kernel_size=3,
+                               strides=4,
+                               padding='same',
+                               activation=activation_function),
+
+        tf.keras.layers.Conv2D(filters=384, kernel_size=3,
+                               strides=4,
+                               padding='same',
+                               activation=activation_function),
     ])
 
     # Step 3 - Flattening
     cnn.add(tf.keras.layers.Flatten())
 
     # Step 4 - Full Connection
-    cnn.add(fullconnected(512, kernel_initializer, activation_function))
+    cnn.add(tf.keras.layers.Dense(4096,
+                                  kernel_initializer=kernel_initializer,
+                                  activation = activation_function))
+    cnn.add(tf.keras.layers.Dropout(dropout_rate))
+    cnn.add(tf.keras.layers.Dense(4096,
+                                  kernel_initializer=kernel_initializer,
+                                  activation=activation_function))
+    cnn.add(tf.keras.layers.Dropout(dropout_rate))
     #cnn.add(fullconnected(64, kernel_initializer, activation_function))
 
     # Step 5 - Output Layer
@@ -58,16 +60,11 @@ def alexnet(activation_function = 'relu',
 
     # Part 3 - Training the CNN
     # Compiling the CNN
-    if(optimizer == "Adam"):
-        #opt = keras.optimizers.Adam(lr=learning_rate, beta_1 = momentum_rate)
-        opt = keras.optimizers.Adam()
-    elif(optimizer == "RMSprop"):
-        #opt = keras.optimizers.RMSprop(lr=learning_rate, momentum = momentum_rate)
-        opt = keras.optimizers.RMSprop()
-
-    cnn.compile(optimizer=opt,
+    cnn.compile(optimizer=optimizer,
                 loss=categorical_crossentropy,
                 metrics=['acc'])
+
+    print(cnn.summary())
 
     return cnn
 
@@ -150,4 +147,5 @@ def resnet(activation_function = 'relu',
     model = Model(inputs=X_input, outputs=X)
 
     model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics = ['acc'])
+    print(model.summary())
     return model
